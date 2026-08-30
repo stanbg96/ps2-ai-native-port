@@ -1,6 +1,9 @@
 #include <jni.h>
-#include "ps2_engine.hpp"
+#include "real_renderer.hpp"
 #include "vfs_engine.hpp"
+#include "ps2_engine.hpp"
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <string>
 #include <iostream>
 
@@ -8,7 +11,22 @@ extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_smartport_ps2engine_MainActivity_startEngineNative(JNIEnv* env, jobject) {
-    return env->NewStringUTF("PS2 Native Porter & OBB Engine: Active");
+    return env->NewStringUTF("PS2 Engine: Свързан с дисплея на телефона");
+}
+
+JNIEXPORT void JNICALL
+Java_com_smartport_ps2engine_MainActivity_nativeSetSurface(JNIEnv* env, jobject, jobject surface) {
+    if (surface != nullptr) {
+        ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+        RealRenderer::getInstance().setWindow(window);
+    } else {
+        RealRenderer::getInstance().cleanup();
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_smartport_ps2engine_MainActivity_nativeRenderGameFrame(JNIEnv* env, jobject, jfloat r, jfloat g, jfloat b) {
+    RealRenderer::getInstance().renderFrame(r, g, b);
 }
 
 JNIEXPORT jboolean JNICALL
@@ -17,13 +35,6 @@ Java_com_smartport_ps2engine_MainActivity_nativeMountObb(JNIEnv* env, jobject, j
     bool success = VfsEngine::getInstance().mountObbDirectory(std::string(path));
     env->ReleaseStringUTFChars(obbPath, path);
     return success ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_smartport_ps2engine_MainActivity_nativeStartGameWithObb(JNIEnv* env, jobject) {
-    VfsEngine::getInstance().runNativeLoop();
-    PS2Engine::getInstance().loadIso("OBB_MOUNTED_GAME");
-    return JNI_TRUE;
 }
 
 JNIEXPORT void JNICALL
