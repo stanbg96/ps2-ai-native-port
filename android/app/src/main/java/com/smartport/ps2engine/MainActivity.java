@@ -1,10 +1,11 @@
 package com.smartport.ps2engine;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Canvas;
 import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -28,7 +29,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 public class MainActivity extends Activity implements SurfaceHolder.Callback, InputManager.InputDeviceListener {
-    static { System.loadLibrary("ps2_engine_native"); }
+    static {
+        System.loadLibrary("ps2_engine_native");
+    }
+
     public native String startEngineNative();
     public native void nativeSetSurface(Object surface);
     public native void nativeRenderGameFrame(float r, float g, float b);
@@ -39,9 +43,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
     private SurfaceView gameSurface;
     private GamepadOverlayView overlayView;
     private LinearLayout studioPanel;
-    private TextView infoText, gamepadStatusText;
+    private TextView infoText;
+    private TextView gamepadStatusText;
     private ProgressBar progressBar;
-    private Button btnSelectIso, btnPrepareObb, btnCompileApk;
+    private Button btnSelectIso;
+    private Button btnPrepareObb;
+    private Button btnCompileApk;
     private Uri selectedIsoUri = null;
     private boolean isGameRunning = false;
     private String obbDirPath;
@@ -50,11 +57,23 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        );
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+            View.SYSTEM_UI_FLAG_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        );
 
         File ext = getObbDir();
-        obbDirPath = (ext != null) ? ext.getAbsolutePath() : Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/obb/" + getPackageName();
+        if (ext != null) {
+            obbDirPath = ext.getAbsolutePath();
+        } else {
+            obbDirPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/obb/" + getPackageName();
+        }
         targetObbFile = new File(obbDirPath, "main.1." + getPackageName() + ".obb");
 
         FrameLayout root = new FrameLayout(this);
@@ -72,7 +91,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         studioPanel.setPadding(60, 40, 60, 40);
 
         TextView title = new TextView(this);
-        title.setText("⚡ PS2 NATIVE REAL ENGINE & OBB STUDIO");
+        title.setText("PS2 NATIVE REAL ENGINE & OBB STUDIO");
         title.setTextColor(Color.parseColor("#58A6FF"));
         title.setTextSize(18);
         studioPanel.addView(title);
@@ -86,26 +105,41 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
         btnSelectIso = new Button(this);
-        btnSelectIso.setText("📂 1. ИЗБЕРИ ISO");
+        btnSelectIso.setText("1. ИЗБЕРИ ISO");
         btnSelectIso.setBackgroundColor(Color.parseColor("#1F6FEB"));
         btnSelectIso.setTextColor(Color.WHITE);
-        btnSelectIso.setOnClickListener(v -> openIsoPicker());
+        btnSelectIso.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openIsoPicker();
+            }
+        });
         btnRow.addView(btnSelectIso);
 
         btnPrepareObb = new Button(this);
-        btnPrepareObb.setText("📦 2. НАПРАВИ OBB");
+        btnPrepareObb.setText("2. НАПРАВИ OBB");
         btnPrepareObb.setBackgroundColor(Color.parseColor("#8957E5"));
         btnPrepareObb.setTextColor(Color.WHITE);
         btnPrepareObb.setVisibility(View.GONE);
-        btnPrepareObb.setOnClickListener(v -> realExtractObbStream());
+        btnPrepareObb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                realExtractObbStream();
+            }
+        });
         btnRow.addView(btnPrepareObb);
 
         btnCompileApk = new Button(this);
-        btnCompileApk.setText("🚀 3. КОМПИЛИРАЙ APK");
+        btnCompileApk.setText("3. КОМПИЛИРАЙ APK");
         btnCompileApk.setBackgroundColor(Color.parseColor("#238636"));
         btnCompileApk.setTextColor(Color.WHITE);
         btnCompileApk.setVisibility(View.GONE);
-        btnCompileApk.setOnClickListener(v -> Toast.makeText(this, "Готово за GitHub билд!", Toast.LENGTH_LONG).show());
+        btnCompileApk.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "Готово за билд!", Toast.LENGTH_LONG).show();
+            }
+        });
         btnRow.addView(btnCompileApk);
 
         studioPanel.addView(btnRow);
@@ -117,32 +151,37 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         infoText = new TextView(this);
         infoText.setTextColor(Color.parseColor("#8B949E"));
         infoText.setTextSize(13);
-        infoText.setText("ℹ️ Избери PS2 ISO файл.");
+        infoText.setText("Избери PS2 ISO файл.");
         studioPanel.addView(infoText);
 
         root.addView(studioPanel);
         setContentView(root);
 
         InputManager im = (InputManager) getSystemService(Context.INPUT_SERVICE);
-        im.registerInputDeviceListener(this, null);
+        if (im != null) {
+            im.registerInputDeviceListener(this, null);
+        }
         updateGamepadState();
         checkAndAutoLaunch();
     }
 
     private void checkAndAutoLaunch() {
-        if (targetObbFile.exists() && targetObbFile.length() > 10000000) {
+        if (targetObbFile != null && targetObbFile.exists() && targetObbFile.length() > 10000000) {
             studioPanel.setVisibility(View.GONE);
             nativeMountObb(obbDirPath);
             startGameLoop();
-            Toast.makeText(this, "🎮 Играта зареди с всички менюта!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Играта зареди с всички менюта!", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         nativeSetSurface(holder.getSurface());
-        if (targetObbFile.exists() && targetObbFile.length() > 10000000) startGameLoop();
+        if (targetObbFile != null && targetObbFile.exists() && targetObbFile.length() > 10000000) {
+            startGameLoop();
+        }
     }
+
     @Override public void surfaceChanged(SurfaceHolder h, int f, int w, int ht) {}
     @Override public void surfaceDestroyed(SurfaceHolder h) { nativeSetSurface(null); }
 
@@ -159,90 +198,148 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             selectedIsoUri = data.getData();
             try {
                 ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(selectedIsoUri, "r");
-                double sizeMb = pfd.getStatSize() / (1024.0 * 1024.0);
-                pfd.close();
-                infoText.setText(String.format("✅ Избран: %s (%.1f MB)\nНатисни 2. НАПРАВИ OBB", selectedIsoUri.getLastPathSegment(), sizeMb));
-                btnPrepareObb.setVisibility(View.VISIBLE);
-            } catch (Exception e) { infoText.setText(e.getMessage()); }
+                if (pfd != null) {
+                    double sizeMb = pfd.getStatSize() / (1024.0 * 1024.0);
+                    pfd.close();
+                    infoText.setText("Избран: " + selectedIsoUri.getLastPathSegment() + " (" + String.format("%.1f", sizeMb) + " MB)\nНатисни 2. НАПРАВИ OBB");
+                    btnPrepareObb.setVisibility(View.VISIBLE);
+                }
+            } catch (Exception e) {
+                infoText.setText(e.getMessage());
+            }
         }
     }
 
     private void realExtractObbStream() {
         if (selectedIsoUri == null) return;
         progressBar.setVisibility(View.VISIBLE);
-        new Thread(() -> {
-            try {
-                File dir = new File(obbDirPath);
-                if (!dir.exists()) dir.mkdirs();
-                ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(selectedIsoUri, "r");
-                FileInputStream in = new FileInputStream(pfd.getFileDescriptor());
-                FileOutputStream out = new FileOutputStream(targetObbFile);
-                byte[] buf = new byte[2 * 1024 * 1024];
-                long total = pfd.getStatSize(), copied = 0;
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                    copied += len;
-                    int p = (int)((copied * 100) / total);
-                    runOnUiThread(() -> {
-                        progressBar.setProgress(p);
-                        infoText.setText("⏳ Копиране в OBB: " + (int)(copied/(1024*1024)) + " MB / " + (int)(total/(1024*1024)) + " MB (" + p + "%)...");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File dir = new File(obbDirPath);
+                    if (!dir.exists()) dir.mkdirs();
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(selectedIsoUri, "r");
+                    if (pfd == null) return;
+                    FileInputStream in = new FileInputStream(pfd.getFileDescriptor());
+                    FileOutputStream out = new FileOutputStream(targetObbFile);
+                    byte[] buf = new byte[2 * 1024 * 1024];
+                    long total = pfd.getStatSize();
+                    long copied = 0;
+                    int len;
+                    while ((len = in.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+                        copied += len;
+                        final int p = (int)((copied * 100) / total);
+                        final long curMb = copied / (1024 * 1024);
+                        final long totMb = total / (1024 * 1024);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                progressBar.setProgress(p);
+                                infoText.setText("Копиране: " + curMb + " MB / " + totMb + " MB (" + p + "%)");
+                            }
+                        });
+                    }
+                    in.close();
+                    out.close();
+                    pfd.close();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressBar.setVisibility(View.GONE);
+                            infoText.setText("OBB е готов! Натисни 3. КОМПИЛИРАЙ APK");
+                            btnCompileApk.setVisibility(View.VISIBLE);
+                        }
+                    });
+                } catch (final Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            infoText.setText(e.getMessage());
+                        }
                     });
                 }
-                in.close(); out.close(); pfd.close();
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    infoText.setText("🎉 OBB е готов в телефона! Натисни 3. КОМПИЛИРАЙ APK.");
-                    btnCompileApk.setVisibility(View.VISIBLE);
-                });
-            } catch (Exception e) { runOnUiThread(() -> infoText.setText(e.getMessage())); }
+            }
         }).start();
     }
 
     private void startGameLoop() {
         if (isGameRunning) return;
         isGameRunning = true;
-        new Thread(() -> {
-            float hue = 0.0f;
-            while (isGameRunning) {
-                hue = (hue + 0.01f > 1.0f) ? 0.0f : hue + 0.01f;
-                nativeRenderGameFrame(0.05f, 0.20f + (hue * 0.25f), 0.40f + (hue * 0.35f));
-                try { Thread.sleep(8); } catch (Exception ignored) {}
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                float hue = 0.0f;
+                while (isGameRunning) {
+                    hue = (hue + 0.01f > 1.0f) ? 0.0f : hue + 0.01f;
+                    nativeRenderGameFrame(0.05f, 0.20f + (hue * 0.25f), 0.40f + (hue * 0.35f));
+                    try {
+                        Thread.sleep(8);
+                    } catch (Exception ignored) {}
+                }
             }
         }).start();
     }
 
     private void updateGamepadState() {
         boolean hasG = false;
-        for (int id : InputDevice.getDeviceIds()) {
+        int[] ids = InputDevice.getDeviceIds();
+        for (int id : ids) {
             InputDevice d = InputDevice.getDevice(id);
-            if (d != null && !d.isVirtual() && ((d.getSources() & InputDevice.SOURCE_GAMEPAD) != 0 || (d.getSources() & InputDevice.SOURCE_JOYSTICK) != 0)) hasG = true;
+            if (d != null && !d.isVirtual()) {
+                int s = d.getSources();
+                if ((s & InputDevice.SOURCE_GAMEPAD) != 0 || (s & InputDevice.SOURCE_JOYSTICK) != 0) {
+                    hasG = true;
+                }
+            }
         }
-        boolean finalHasG = hasG;
-        runOnUiThread(() -> {
-            overlayView.setVisibility(finalHasG ? View.GONE : View.VISIBLE);
-            gamepadStatusText.setText(finalHasG ? "🎮 Джойстик: СВЪРЗАН (Екран чист)" : "📱 Тъч режим");
-            gamepadStatusText.setTextColor(finalHasG ? Color.parseColor("#3FB950") : Color.parseColor("#D29922"));
+        final boolean finalHasG = hasG;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                overlayView.setVisibility(finalHasG ? View.GONE : View.VISIBLE);
+                gamepadStatusText.setText(finalHasG ? "Джойстик: СВЪРЗАН (Екран чист)" : "Тъч режим");
+                gamepadStatusText.setTextColor(finalHasG ? Color.parseColor("#3FB950") : Color.parseColor("#D29922"));
+            }
         });
     }
 
     @Override public void onInputDeviceAdded(int id) { updateGamepadState(); }
     @Override public void onInputDeviceRemoved(int id) { updateGamepadState(); }
     @Override public void onInputDeviceChanged(int id) { updateGamepadState(); }
-    @Override public boolean onKeyDown(int k, KeyEvent e) { nativeSendInput(k); return super.onKeyDown(k, e); }
-    @Override public boolean onKeyUp(int k, KeyEvent e) { nativeSendInput(0); return super.onKeyUp(k, e); }
-    @Override public boolean onGenericMotionEvent(MotionEvent e) {
+
+    @Override
+    public boolean onKeyDown(int k, KeyEvent e) {
+        nativeSendInput(k);
+        return super.onKeyDown(k, e);
+    }
+
+    @Override
+    public boolean onKeyUp(int k, KeyEvent e) {
+        nativeSendInput(0);
+        return super.onKeyUp(k, e);
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent e) {
         if ((e.getSource() & InputDevice.SOURCE_JOYSTICK) != 0) {
-            nativeSendAxes(e.getAxisValue(MotionEvent.AXIS_X), e.getAxisValue(MotionEvent.AXIS_Y), e.getAxisValue(MotionEvent.AXIS_Z), e.getAxisValue(MotionEvent.AXIS_RZ));
+            nativeSendAxes(
+                e.getAxisValue(MotionEvent.AXIS_X),
+                e.getAxisValue(MotionEvent.AXIS_Y),
+                e.getAxisValue(MotionEvent.AXIS_Z),
+                e.getAxisValue(MotionEvent.AXIS_RZ)
+            );
             return true;
         }
         return super.onGenericMotionEvent(e);
     }
 
-    class GamepadOverlayView extends View {
+    static class GamepadOverlayView extends View {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         public GamepadOverlayView(Context c) { super(c); }
-        @Override protected void onDraw(Canvas cv) {
+        @Override
+        protected void onDraw(Canvas cv) {
             super.onDraw(cv);
             int w = getWidth(), h = getHeight();
             if (w == 0 || h == 0) return;
