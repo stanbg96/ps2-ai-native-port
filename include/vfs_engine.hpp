@@ -13,4 +13,5 @@ public:
     bool mountObbDirectory(const std::string& path);
     bool loadAsset(const std::string& assetName, std::vector<uint8_t>& outData);
     bool isMounted() const { return isObbMounted; }
+    void runNativeLoop();
 };

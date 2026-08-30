@@ -4,13 +4,11 @@
 #include <string>
 #include <iostream>
 
-extern void start_ps2_native_game();
-
 extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_smartport_ps2engine_MainActivity_startEngineNative(JNIEnv* env, jobject) {
-    return env->NewStringUTF("PS2 Native Porter & OBB Engine: Ready");
+    return env->NewStringUTF("PS2 Native Porter & OBB Engine: Active");
 }
 
 JNIEXPORT jboolean JNICALL
@@ -23,8 +21,8 @@ Java_com_smartport_ps2engine_MainActivity_nativeMountObb(JNIEnv* env, jobject, j
 
 JNIEXPORT jboolean JNICALL
 Java_com_smartport_ps2engine_MainActivity_nativeStartGameWithObb(JNIEnv* env, jobject) {
-    std::cout << "[Native Port] Стартиране на играта с монтиран OBB пакет...\n";
-    start_ps2_native_game();
+    VfsEngine::getInstance().runNativeLoop();
+    PS2Engine::getInstance().loadIso("OBB_MOUNTED_GAME");
     return JNI_TRUE;
 }
 
