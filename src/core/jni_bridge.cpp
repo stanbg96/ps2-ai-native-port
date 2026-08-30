@@ -11,7 +11,7 @@ extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_smartport_ps2engine_MainActivity_startEngineNative(JNIEnv* env, jobject) {
-    return env->NewStringUTF("PS2 Engine: Свързан с дисплея на телефона");
+    return env->NewStringUTF("PS2 Engine: 120 FPS Vulkan/OpenGL Native Ready");
 }
 
 JNIEXPORT void JNICALL

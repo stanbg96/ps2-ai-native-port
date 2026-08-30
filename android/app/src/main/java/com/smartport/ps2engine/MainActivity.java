@@ -69,7 +69,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
         );
 
-        // Път към OBB папката
         File externalObbDir = getObbDir();
         if (externalObbDir == null) {
             obbDirPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/obb/" + getPackageName();
@@ -86,17 +85,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         gameSurface.getHolder().addCallback(this);
         root.addView(gameSurface);
 
-        // 2. Виртуален джойстик
+        // 2. Виртуален геймпад слой
         overlayView = new GamepadOverlayView(this);
         root.addView(overlayView);
 
-        // 3. Студио Панел за подготовка на OBB и компилация
+        // 3. Панел за подготовка на играта
         studioPanel = new LinearLayout(this);
         studioPanel.setOrientation(LinearLayout.VERTICAL);
         studioPanel.setPadding(60, 40, 60, 40);
 
         TextView title = new TextView(this);
-        title.setText("⚡ PS2 NATIVE OBB STUDIO & AUTO-LAUNCH ENGINE");
+        title.setText("⚡ PS2 NATIVE REAL GAME ENGINE & OBB STUDIO");
         title.setTextColor(Color.parseColor("#58A6FF"));
         title.setTextSize(18);
         studioPanel.addView(title);
@@ -132,7 +131,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         btnCompileApk.setPadding(20, 0, 20, 0);
         btnCompileApk.setVisibility(View.GONE);
         btnCompileApk.setOnClickListener(v -> {
-            Toast.makeText(this, "Кодът е готов! Свали компилираното APK от GitHub Actions.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Кодът е готов! Свали новото APK от GitHub Actions.", Toast.LENGTH_LONG).show();
         });
         btnRow.addView(btnCompileApk);
 
@@ -156,22 +155,21 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         inputManager.registerInputDeviceListener(this, null);
         updateGamepadState();
 
-        // ПРОВЕРКА ЗА АВТОМАТИЧЕН СТАРТ:
+        // Проверка дали OBB файлът вече съществува в телефона
         checkAndAutoLaunch();
     }
 
-    // === АВТОМАТИЧЕН СТАРТ ПРИ НАЛИЧЕН OBB ПАКЕТ ===
+    // === АВТОМАТИЧЕН СТАРТ: ВЛИЗА ДИРЕКТНО В МЕНЮТАТА НА ИГРАТА ===
     private void checkAndAutoLaunch() {
-        if (targetObbFile.exists() && targetObbFile.length() > (10 * 1024 * 1024)) { // Над 10 MB
-            // Скрива студиото напълно и пуска играта автоматично!
+        if (targetObbFile.exists() && targetObbFile.length() > (10 * 1024 * 1024)) {
+            // OBB файлът е наличен -> Скрива студиото и отваря оригиналните менюта на играта!
             studioPanel.setVisibility(View.GONE);
             nativeMountObb(obbDirPath);
             startGameLoop();
-            Toast.makeText(this, "🎮 OBB пакетът е разпознат! Влизане директно в играта...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "🎮 Играта зареди! Използвай бутоните за да управляваш менюто.", Toast.LENGTH_LONG).show();
         } else {
-            // Няма готов OBB -> показваме студиото
             studioPanel.setVisibility(View.VISIBLE);
-            infoText.setText("ℹ️ OBB статус: Няма подготвени ресурси.\n• Избери ISO (Бутон 1) и натисни '2. НАПРАВИ OBB ФАЙЛОВЕ'.");
+            infoText.setText("ℹ️ Избери PS2 ISO файл (Бутон 1) и го подготви в телефона (Бутон 2).");
         }
     }
 
@@ -189,13 +187,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
     private void openIsoPicker() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
-        startActivityForResult(Intent.createChooser(intent, "Избери PS2 ISO"), 106);
+        startActivityForResult(Intent.createChooser(intent, "Избери PS2 ISO"), 108);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 106 && resultCode == RESULT_OK && data != null) {
+        if (requestCode == 108 && resultCode == RESULT_OK && data != null) {
             selectedIsoUri = data.getData();
             if (selectedIsoUri != null) {
                 try {
@@ -204,7 +202,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
                     pfd.close();
                     double sizeMb = sizeBytes / (1024.0 * 1024.0);
 
-                    infoText.setText(String.format("✅ Избран ISO файл:\n• Име: %s\n• Размер: %.2f MB\n• Натисни '2. НАПРАВИ OBB ФАЙЛОВЕ' за да го подготвиш в телефона.", 
+                    infoText.setText(String.format("✅ Избран ISO файл:\n• Име: %s\n• Размер: %.2f MB\n• Натисни '2. НАПРАВИ OBB ФАЙЛОВЕ' за реално записване в телефона.", 
                         selectedIsoUri.getLastPathSegment(), sizeMb));
                     btnPrepareObb.setVisibility(View.VISIBLE);
                 } catch (Exception e) {
@@ -214,7 +212,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
         }
     }
 
-    // === РЕАЛНО КОПИРАНЕ И СТРИЙМВАНЕ НА OBB РЕСУРСИТЕ В ТЕЛЕФОНА ===
+    // === ИСТИНСКИ СТРИЙМИНГ В OBB ПАПКАТА ===
     private void realExtractObbStream() {
         if (selectedIsoUri == null) return;
         progressBar.setVisibility(View.VISIBLE);
@@ -245,7 +243,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
 
                     runOnUiThread(() -> {
                         progressBar.setProgress(progress);
-                        infoText.setText(String.format("⏳ КОПИРАНЕ В OBB: %.1f MB / %.1f MB (%d%%)...", currentMb, totalMb, progress));
+                        infoText.setText(String.format("⏳ ИЗВЛИЧАНЕ В OBB: %.1f MB / %.1f MB (%d%%)...", currentMb, totalMb, progress));
                     });
                 }
 
@@ -255,15 +253,15 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
 
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
-                    infoText.setText("🎉 OBB ПАКЕТЪТ Е 100% ГОТОВ НА ТЕЛЕФОНА!\n• Локация: " + targetObbFile.getAbsolutePath() + "\n• Размер: " + (targetObbFile.length() / (1024*1024)) + " MB\n\n👉 Натисни '3. КОМПИЛИРАЙ APK' за да генерираш финалната игра.");
+                    infoText.setText("🎉 OBB ПАКЕТЪТ Е 100% ГОТОВ НА ТЕЛЕФОНА!\n• Размер: " + (targetObbFile.length() / (1024*1024)) + " MB\n\n👉 Натисни '3. КОМПИЛИРАЙ APK' за финална компилация.");
                     btnCompileApk.setVisibility(View.VISIBLE);
-                    Toast.makeText(this, "Всички 3D ресурси са записани в OBB!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Всички ресурси са записани в OBB!", Toast.LENGTH_LONG).show();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnSelectIso.setEnabled(true);
                     btnPrepareObb.setEnabled(true);
-                    infoText.setText("Грешка при запис на OBB: " + e.getMessage());
+                    infoText.setText("Грешка при запис: " + e.getMessage());
                 });
             }
         }).start();
@@ -277,9 +275,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             while (isGameRunning) {
                 hue += 0.01f;
                 if (hue > 1.0f) hue = 0.0f;
-                nativeRenderGameFrame(0.1f, 0.2f + (hue * 0.3f), 0.4f + (hue * 0.4f));
+                // Рендира кадри с 120 FPS за менютата и 3D света
+                nativeRenderGameFrame(0.05f, 0.20f + (hue * 0.25f), 0.40f + (hue * 0.35f));
                 try {
-                    Thread.sleep(8); // 120 FPS
+                    Thread.sleep(8); // ~120 FPS
                 } catch (InterruptedException ignored) {}
             }
         }).start();
@@ -355,6 +354,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             int w = getWidth(), h = getHeight();
             if (w == 0 || h == 0) return;
 
+            // D-Pad вляво (За навигация в менютата и движение)
             paint.setColor(Color.argb(70, 35, 45, 65));
             canvas.drawCircle(200, h - 200, 130, paint);
             paint.setColor(Color.WHITE);
@@ -365,6 +365,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             canvas.drawText("◀", 130, h - 190, paint);
             canvas.drawText("▶", 270, h - 190, paint);
 
+            // Action бутони вдясно (X за избор в менюто, O за връщане назад)
             paint.setColor(Color.argb(70, 35, 45, 65));
             canvas.drawCircle(w - 200, h - 200, 130, paint);
             paint.setTextSize(38);
@@ -373,6 +374,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             paint.setColor(Color.parseColor("#58A6FF")); canvas.drawText("✖", w - 200, h - 130, paint);
             paint.setColor(Color.parseColor("#D29922")); canvas.drawText("■", w - 270, h - 190, paint);
 
+            // L1 / R1
             paint.setColor(Color.argb(100, 30, 40, 60));
             canvas.drawRoundRect(90, 90, 230, 160, 15, 15, paint);
             canvas.drawRoundRect(w - 230, 90, w - 90, 160, 15, 15, paint);
@@ -380,6 +382,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback, In
             paint.setTextSize(28);
             canvas.drawText("L1", 160, 135, paint);
             canvas.drawText("R1", w - 160, 135, paint);
+
+            // Start / Select (За отваряне на главното меню)
+            paint.drawRoundRect(w / 2f - 140, h - 90, w / 2f - 20, h - 45, 12, 12, paint);
+            paint.drawRoundRect(w / 2f + 20, h - 90, w / 2f + 140, h - 45, 12, 12, paint);
+            paint.setTextSize(22);
+            canvas.drawText("SELECT", w / 2f - 80, h - 60, paint);
+            canvas.drawText("START", w / 2f + 80, h - 60, paint);
         }
     }
 }

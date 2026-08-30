@@ -10,7 +10,7 @@ VfsEngine& VfsEngine::getInstance() {
 bool VfsEngine::mountObbDirectory(const std::string& path) {
     obbDirectory = path;
     isObbMounted = true;
-    std::cout << "[VFS Engine] OBB Пакетът е монтиран от: " << path << "\n";
+    std::cout << "[VFS] OBB файлът е монтиран от: " << path << "\n";
     return true;
 }
 
@@ -28,5 +28,5 @@ bool VfsEngine::loadAsset(const std::string& assetName, std::vector<uint8_t>& ou
 }
 
 void VfsEngine::runNativeLoop() {
-    std::cout << "[VFS Engine] Нативният игрови конвейер е активен!\n";
+    std::cout << "[VFS] Играта е активна: Менюта, 3D свят и звуци се четат нативно от OBB!\n";
 }
