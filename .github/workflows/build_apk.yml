@@ -1,4 +1,4 @@
-name: Build PS2 Porter Studio APK
+name: Build Porter Studio APK
 
 on: [push, workflow_dispatch]
 
@@ -13,14 +13,16 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       - name: Setup Android SDK and NDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
+      - name: Setup Stable Gradle 8.4
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.4"
 
       - name: Build Porter Studio APK
         working-directory: ./android
