@@ -15,7 +15,7 @@ jobs:
           gradle-version: "8.4"
       - name: Build APK
         working-directory: ./android
-        run: gradle assembleDebug --info --stacktrace
+        run: gradle assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
