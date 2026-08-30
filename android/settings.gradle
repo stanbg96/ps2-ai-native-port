@@ -1,2 +1,2 @@
-include :app
-rootProject.name = PS2Engine
+include(":app")
+rootProject.name = "PS2Engine"
