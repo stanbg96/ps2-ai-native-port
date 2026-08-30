@@ -1,5 +1,4 @@
 #include "real_renderer.hpp"
-#include <iostream>
 
 RealRenderer& RealRenderer::getInstance() {
     static RealRenderer instance;
@@ -17,7 +16,6 @@ void RealRenderer::setWindow(ANativeWindow* win) {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8,
-        EGL_DEPTH_SIZE, 24,
         EGL_NONE
     };
 
@@ -30,15 +28,13 @@ void RealRenderer::setWindow(ANativeWindow* win) {
     context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
 
     eglMakeCurrent(display, surface, surface, context);
-    glEnable(GL_DEPTH_TEST);
     isReady = true;
-    std::cout << "[Renderer] Графичният екран е готов за 120 FPS рендер на играта и менютата!\n";
 }
 
 void RealRenderer::renderFrame(float r, float g, float b) {
     if (!isReady) return;
     glClearColor(r, g, b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
     eglSwapBuffers(display, surface);
 }
 

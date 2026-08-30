@@ -5,13 +5,12 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <string>
-#include <iostream>
 
 extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_smartport_ps2engine_MainActivity_startEngineNative(JNIEnv* env, jobject) {
-    return env->NewStringUTF("PS2 Engine: 120 FPS Vulkan/OpenGL Native Ready");
+    return env->NewStringUTF("PS2 Engine: Active");
 }
 
 JNIEXPORT void JNICALL

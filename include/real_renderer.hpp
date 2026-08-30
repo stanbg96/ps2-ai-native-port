@@ -3,7 +3,6 @@
 #include <android/native_window_jni.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
-#include <iostream>
 
 class RealRenderer {
 private:
@@ -12,7 +11,6 @@ private:
     EGLSurface surface = EGL_NO_SURFACE;
     EGLContext context = EGL_NO_CONTEXT;
     bool isReady = false;
-
 public:
     static RealRenderer& getInstance();
     void setWindow(ANativeWindow* win);
